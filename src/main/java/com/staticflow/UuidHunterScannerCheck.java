@@ -53,17 +53,20 @@ public class UuidHunterScannerCheck implements ScanCheck {
             //generate a list of candidate V1 UUIDs in 100 nanosecond increments between the user defined range
            Iterable<UUID> possibleUuids = Utils.genUUIDs(uuid, 10000, ExtensionState.getInstance().getUuidScanRange());
            possibleUuids.forEach(possibleUuid -> {
-               //Update insertion point and send request
-               HttpRequest request = auditInsertionPoint.buildHttpRequestWithPayload(
-                       ByteArray.byteArray(possibleUuid.toString())).withService(httpRequestResponse.httpService());
-               HttpRequestResponse response = ExtensionState.getInstance().getCallbacks().http().sendRequest(request);
-               short status = response.statusCode();
-               //if the status code is a 2XX it's a FIRM HIGH Issue
-               if (status > 199 && status < 300) {
-                   auditIssueList.add(new UuidHunterAuditIssue(possibleUuid, response, AuditIssueConfidence.FIRM, AuditIssueSeverity.HIGH));
-               } else if (status >299 && status < 400) {
-                   //If the status code is a 3XX it's a TENTATIVE MEDIUM Issue
-                   auditIssueList.add(new UuidHunterAuditIssue(possibleUuid, response, AuditIssueConfidence.TENTATIVE,AuditIssueSeverity.MEDIUM));
+               //Don't scan the original UUID
+               if(!possibleUuid.toString().equals(uuid.toString())) {
+                   //Update insertion point and send request
+                   HttpRequest request = auditInsertionPoint.buildHttpRequestWithPayload(
+                           ByteArray.byteArray(possibleUuid.toString())).withService(httpRequestResponse.httpService());
+                   HttpRequestResponse response = ExtensionState.getInstance().getCallbacks().http().sendRequest(request);
+                   short status = response.statusCode();
+                   //if the status code is a 2XX it's a FIRM HIGH Issue
+                   if (status > 199 && status < 300) {
+                       auditIssueList.add(new UuidHunterAuditIssue(possibleUuid, response, AuditIssueConfidence.FIRM, AuditIssueSeverity.HIGH));
+                   } else if (status >299 && status < 400) {
+                       //If the status code is a 3XX it's a TENTATIVE MEDIUM Issue
+                       auditIssueList.add(new UuidHunterAuditIssue(possibleUuid, response, AuditIssueConfidence.TENTATIVE,AuditIssueSeverity.MEDIUM));
+                   }
                }
            });
            return AuditResult.auditResult(auditIssueList);
